@@ -52,6 +52,7 @@ const EditorLayout = ({ specActions, getComponent }) => {
   const Container = getComponent("Container")
 
   const handleChange = (newYaml, origin="editor") => {
+    // TODO: here we can put all the code related to editor updates (sync updates with DB etc.)
     specActions.updateSpec(newYaml, origin)
   }
 

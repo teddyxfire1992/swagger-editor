@@ -5,11 +5,26 @@ import URL from "url"
 import DropdownMenu from "./DropdownMenu"
 import fileDownload from "js-file-download"
 import YAML from "js-yaml"
+import { Modal, Table, Button, Icon } from 'antd';
 import beautifyJson from "json-beautify"
 import { petStoreOas2Def, petStoreOas3Def } from "../../../plugins/default-definitions"
 
 
 import Logo from "../assets/logo_small.svg"
+
+// TODO: we'll add our custom modal with projects list inside this component
+const data = [
+  {
+    key: '1',
+    projectName: 'Workbnb',
+    lastUpdated: '01.01.2023.',
+  },
+  {
+    key: '1',
+    projectName: 'Cassie',
+    lastUpdated: '05.01.2023.',
+  },
+];
 
 export default class Topbar extends React.Component {
   constructor(props, context) {
@@ -19,9 +34,67 @@ export default class Topbar extends React.Component {
       swaggerClient: null,
       clients: [],
       servers: [],
-      definitionVersion: "Unknown"
+      definitionVersion: "Unknown",
+      isModalOpen: false
     }
   }
+
+  showCustomModal = () => {
+    this.setState((prevState) => ({
+      ...prevState,
+      isModalOpen: true
+    }));
+  };
+
+  handleOk = () => {
+    this.setState((prevState) => ({
+      ...prevState,
+      isModalOpen: false
+    }));
+  };
+
+  handleCancel = () => {
+    this.setState((prevState) => ({
+      ...prevState,
+      isModalOpen: false
+    }));
+  };
+
+  renderColumns = () => (
+    [
+      {
+        title: 'Project name',
+        dataIndex: 'projectName',
+        key: 'projectName',
+        render: (text) => <a>{text}</a>,
+      },
+      {
+        title: 'Last updated',
+        dataIndex: 'lastUpdated',
+        key: 'lastUpdated',
+      },
+      {
+        title: 'Action',
+        key: 'action',
+        render: (_, record) => (
+          <div onClick={() => {
+            fetch('http://rackerlabs.github.io/wadl2swagger/openstack/swagger/os-certificates-v2.1.json')
+              .then(res => res.text())
+              .then(text => {
+                this.props.specActions.updateSpec(
+                  YAML.dump(YAML.load(text), {
+                    lineWidth: -1
+                  })
+                )
+              })
+              .finally(this.handleCancel)
+          }}>
+            <a>Select</a>
+          </div>
+        ),
+      },
+    ]
+  );
 
   getGeneratorUrl = () => {
     const { isOAS3, isSwagger2 } = this.props.specSelectors
@@ -106,6 +179,10 @@ export default class Topbar extends React.Component {
         })
     }
   }
+
+  selectFromList = () => {
+    this.showCustomModal();
+  };
 
   saveAsYaml = () => {
     let editorContent = this.props.specSelectors.specStr()
@@ -319,6 +396,10 @@ export default class Topbar extends React.Component {
     }
   }
 
+  openPier = () => {
+    window.location.href = "https://pier.farshore.com/";
+  };
+
   render() {
     let { getComponent, specSelectors, topbarActions } = this.props
     const Link = getComponent("Link")
@@ -350,48 +431,55 @@ export default class Topbar extends React.Component {
     return (
       <div className="swagger-editor-standalone">
         <div className="topbar">
-          <div className="topbar-wrapper">
-            <Link href="https://swagger.io/tools/swagger-editor/">
-              <img height="35" className="topbar-logo__img" src={ Logo } alt=""/>
-            </Link>
-            <DropdownMenu {...makeMenuOptions("File")}>
-              <li><button type="button" onClick={this.importFromURL}>Import URL</button></li>
-              <ImportFileMenuItem onDocumentLoad={content => this.props.specActions.updateSpec(content)} />
-              <li role="separator"></li>
-              {isJson ? [
-                  <li key="1"><button type="button" onClick={this.saveAsJson}>Save as JSON</button></li>,
-                  <li key="2"><button type="button" onClick={this.saveAsYaml}>Convert and save as YAML</button></li>
-              ] : [
-                  <li key="1"><button type="button" onClick={this.saveAsYaml}>Save as YAML</button></li>,
-                  <li key="2"><button type="button" onClick={this.saveAsJson}>Convert and save as JSON</button></li>
-              ]}
-              <li role="separator"></li>
-              <li><button type="button" onClick={this.clearEditor}>Clear editor</button></li>
-            </DropdownMenu>
-            <DropdownMenu {...makeMenuOptions("Edit")}>
-              <li><button type="button" onClick={this.convertToYaml}>Convert to YAML</button></li>
-              <ConvertDefinitionMenuItem
-                isSwagger2={specSelectors.isSwagger2()}
-                swagger2ConverterUrl={swagger2ConverterUrl}
-                onClick={() => topbarActions.showModal("convert")}
-              />
-              <li role="separator"></li>
-              <li><button type="button" onClick={this.loadPetStoreOas3}>Load Petstore OAS 3.0</button></li>
-              <li><button type="button" onClick={this.loadPetStoreOas2}>Load Petstore OAS 2.0</button></li>
-            </DropdownMenu>
-            <TopbarInsert {...this.props} />
-            { showServersMenu ? <DropdownMenu className="long" {...makeMenuOptions("Generate Server")}>
-              { this.state.servers
-                  .map((serv, i) => <li key={i}><button type="button" onClick={() => this.downloadGeneratedFile("server", serv)}>{serv}</button></li>) }
-            </DropdownMenu> : null }
-            { showClientsMenu ? <DropdownMenu className="long" {...makeMenuOptions("Generate Client")}>
-              { this.state.clients
-                  .map((cli, i) => <li key={i}><button type="button" onClick={() => this.downloadGeneratedFile("client", cli)}>{cli}</button></li>) }
-            </DropdownMenu> : null }
-            {AboutMenu && <AboutMenu {...makeMenuOptions("About")} />}
-            {NewEditorButton && <NewEditorButton />}
+          <div className="topbar-wrapper" style={{ justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <img src="https://pier.farshore.com/img/ptraker_img/logo_03.png" alt="logo" style={{ width: "50px", marginRight: "30px" }} />
+              <DropdownMenu {...makeMenuOptions("File")}>
+                {/*<li><button type="button" onClick={this.importFromURL}>Import URL</button></li>*/}
+                <ImportFileMenuItem onDocumentLoad={content => this.props.specActions.updateSpec(content)} />
+                <li><button type="button" onClick={this.selectFromList}>Select from list</button></li>
+                {/*<li role="separator"></li>*/}
+                {/*{isJson ? [*/}
+                {/*    <li key="1"><button type="button" onClick={this.saveAsJson}>Save as JSON</button></li>,*/}
+                {/*    <li key="2"><button type="button" onClick={this.saveAsYaml}>Convert and save as YAML</button></li>*/}
+                {/*] : [*/}
+                {/*    <li key="1"><button type="button" onClick={this.saveAsYaml}>Save as YAML</button></li>,*/}
+                {/*    <li key="2"><button type="button" onClick={this.saveAsJson}>Convert and save as JSON</button></li>*/}
+                {/*]}*/}
+                {/*<li role="separator"></li>*/}
+                {/*<li><button type="button" onClick={this.clearEditor}>Clear editor</button></li>*/}
+              </DropdownMenu>
+              {/*<DropdownMenu {...makeMenuOptions("Edit")}>*/}
+              {/*  <li><button type="button" onClick={this.convertToYaml}>Convert to YAML</button></li>*/}
+              {/*  <ConvertDefinitionMenuItem*/}
+              {/*    isSwagger2={specSelectors.isSwagger2()}*/}
+              {/*    swagger2ConverterUrl={swagger2ConverterUrl}*/}
+              {/*    onClick={() => topbarActions.showModal("convert")}*/}
+              {/*  />*/}
+              {/*  <li role="separator"></li>*/}
+              {/*  <li><button type="button" onClick={this.loadPetStoreOas3}>Load Petstore OAS 3.0</button></li>*/}
+              {/*  <li><button type="button" onClick={this.loadPetStoreOas2}>Load Petstore OAS 2.0</button></li>*/}
+              {/*</DropdownMenu>*/}
+              {/*<TopbarInsert {...this.props} />*/}
+              {/*{ showServersMenu ? <DropdownMenu className="long" {...makeMenuOptions("Generate Server")}>*/}
+              {/*  { this.state.servers*/}
+              {/*      .map((serv, i) => <li key={i}><button type="button" onClick={() => this.downloadGeneratedFile("server", serv)}>{serv}</button></li>) }*/}
+              {/*</DropdownMenu> : null }*/}
+              {/*{ showClientsMenu ? <DropdownMenu className="long" {...makeMenuOptions("Generate Client")}>*/}
+              {/*  { this.state.clients*/}
+              {/*      .map((cli, i) => <li key={i}><button type="button" onClick={() => this.downloadGeneratedFile("client", cli)}>{cli}</button></li>) }*/}
+              {/*</DropdownMenu> : null }*/}
+              {/*{AboutMenu && <AboutMenu {...makeMenuOptions("About")} />}*/}
+            </div>
+            <Button type="primary" onClick={this.openPier}>
+              <Icon type="left" />
+              Back to Pier
+            </Button>
           </div>
         </div>
+        <Modal title="Projects" visible={this.state.isModalOpen} onOk={this.handleOk} onCancel={this.handleCancel}>
+          <Table columns={this.renderColumns()} dataSource={data} />
+        </Modal>
       </div>
     )
   }
